@@ -6,9 +6,11 @@ using RemittanceApp.Models.Models.User;
 using RemittanceApp.Utility;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using static RemittanceApp.Utility.APIValidator;
 
 namespace RemittanceApp.Controllers
 {
@@ -34,15 +36,16 @@ namespace RemittanceApp.Controllers
             logger.LogInformation("Request - UserController -> SignIn: " + JsonConvert.SerializeObject(model));
             if (ModelState.IsValid)
             {
-                if (APIValidator.ValidateChannelId(model.ChannelId))
+                if (APIValidator.SignInUser(model.userId,model.password))
                 {
-                    response = new ResponseMessage(HttpStatusCode.OK.ToString(), (int)HttpStatusCode.OK, null);
+                    response = new ResponseMessage(Enum.GetName(ErrorCodes.SUCCESS_RESPONSE),
+                    (int)ErrorCodes.SUCCESS_RESPONSE, null);
                     logger.LogInformation("Response - UserController -> SignIn: " + JsonConvert.SerializeObject(response));
                     return Ok(response);
                 }
                 else
                 {
-                    var response = new ResponseMessage(HttpStatusCode.BadRequest.ToString(), (int)HttpStatusCode.BadRequest, "Invalid channel Id.");
+                    var response = new ResponseMessage(Enum.GetName(ErrorCodes.invalid_user_password), (int)ErrorCodes.invalid_user_password, "");
                     logger.LogInformation("Response - UserController -> SignIn: " + JsonConvert.SerializeObject(response));
                     return BadRequest(response);
                 }
@@ -111,6 +114,56 @@ namespace RemittanceApp.Controllers
             {
                 var response = new ResponseMessage(HttpStatusCode.BadRequest.ToString(), (int)HttpStatusCode.BadRequest, "Invalid channel Id.");
                 logger.LogInformation("Response - UserController -> ResetPassword: " + JsonConvert.SerializeObject(response));
+                return BadRequest(response);
+            }
+        }
+       
+        
+        [HttpGet("GeneratePassword")]
+        public IActionResult GeneratePassword(string userId, string password, string channelId)
+        {
+            String strPassword = "";
+            logger.LogInformation("Request - UserController -> GeneratePassword: " + JsonConvert.SerializeObject(new { userId = userId, password = password, channelId = channelId }));
+            if (APIValidator.ValidateChannelId(channelId))
+            {
+
+                if (!ValidateUser(userId, password))
+                {
+                    var response = new ResponseMessage(Enum.GetName(ErrorCodes.invalid_user_password), (int)ErrorCodes.invalid_user_password, "");
+                    logger.LogInformation("Response - UserController -> ValidateUser: " + JsonConvert.SerializeObject(response));
+                    return BadRequest(response);
+                }
+                Helper helper = new Helper();
+                DataSet dsResult = helper.fmApiUser(new loginModel() { userId = userId, password = password }, "GNPASS");
+                if (dsResult.Tables.Count > 0)
+                {
+                    if (dsResult.Tables[0].Rows[0].ItemArray[0].ToString() == "P")
+                    {
+                        strPassword = dsResult.Tables[0].Rows[0].ItemArray[1].ToString();
+                    }
+                    else
+                    {
+                        strPassword = "";
+                    }
+
+                }
+                else
+                {
+                    strPassword = "";
+                }
+
+
+                response = new ResponseMessage(
+                   Enum.GetName(ErrorCodes.SUCCESS_RESPONSE),
+                   (int)ErrorCodes.SUCCESS_RESPONSE,
+                 new { password = strPassword });
+                logger.LogInformation("Response - UserController -> GeneratePassword: " + JsonConvert.SerializeObject(response));
+                return Ok(response);
+            }
+            else
+            {
+                var response = new ResponseMessage(HttpStatusCode.BadRequest.ToString(), (int)HttpStatusCode.BadRequest, "Invalid channel Id.");
+                logger.LogInformation("Response - UserController -> GeneratePassword: " + JsonConvert.SerializeObject(response));
                 return BadRequest(response);
             }
         }

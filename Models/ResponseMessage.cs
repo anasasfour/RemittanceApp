@@ -8,8 +8,9 @@ namespace RemittanceApp.Models
     public class ResponseMessage
     {
         #region Properties
-        public string Status { get; set; }
+      
         public int ErrorCode { get; set; }
+        public string ErrorDesc { get; set; }
         public Object Data { get; set; }
         #endregion
 
@@ -19,10 +20,11 @@ namespace RemittanceApp.Models
 
         }
 
-        public ResponseMessage(string status,int errorcode, object data)
+        public ResponseMessage(string ErrorDesc, int errorcode, object data)
         {
-            this.Status = status;
+           
             this.ErrorCode = errorcode;
+            this.ErrorDesc = ErrorDesc;
             this.Data = data;
         }
         #endregion

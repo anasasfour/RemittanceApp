@@ -10,13 +10,23 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.VisualBasic;
+using RemittanceApp.Models.Models.User;
 using TP;
+using WcfCoreMtomEncoder;
 
 namespace RemittanceApp.Utility
 {
     public class Helper
     {
+        #region SP Code
         const string T_BOS_CURRENCY = "7030";
+        const string T_SPS_ORG_CURR_COUNTRY = "4003";
+        const string T_SPS_API_USER = "9100";
+        const string T_ADMIN_F9 = "1001";
+        #endregion
+
+        #region TP Config
+
         private string GetCurrentDate()
         {
             string sYear = DateTime.Now.Year.ToString();
@@ -72,42 +82,48 @@ namespace RemittanceApp.Utility
             }
         }
 
-        public DataSet fmCurrency_Get_Info(string strUserID, string strCurrency_ID)
+    
+
+        public IMiddlewareService serviceConnector()
         {
             try
             {
-                DataSet dsTmp;
-                string strQuery;
-                strQuery = PrepareXML(T_BOS_CURRENCY, "100", "Admin", "Admin", strUserID, "G", strCurrency_ID);
+
+                EndpointAddress baseAddress = new EndpointAddress("http://10.1.46.45/MiddlewareService.svc");
+
+                var transport = new HttpTransportBindingElement();
+                transport.TransferMode = TransferMode.Streamed;
+                System.Xml.XmlDictionaryReaderQuotas readerQuotes = new System.Xml.XmlDictionaryReaderQuotas();
+                readerQuotes.MaxArrayLength = int.MaxValue;
+                readerQuotes.MaxBytesPerRead = int.MaxValue;
+                readerQuotes.MaxDepth = int.MaxValue;
+                readerQuotes.MaxNameTableCharCount = int.MaxValue;
+                readerQuotes.MaxStringContentLength = int.MaxValue;
+                var encoding = new MtomMessageEncoderBindingElement(new TextMessageEncodingBindingElement()
+                {
+                    MessageVersion = MessageVersion.Soap11,
+                    ReaderQuotas = readerQuotes
+                });
+                var binding1 = new CustomBinding(encoding, transport);
+
+                int timeout = 15; // minutes could be configurable
+                binding1.SendTimeout = TimeSpan.FromMinutes(timeout);
+                binding1.ReceiveTimeout = new TimeSpan(timeout);
+                binding1.OpenTimeout = new TimeSpan(timeout);
+                binding1.CloseTimeout = new TimeSpan(timeout);
+
+            
 
 
-                dsTmp = Fetch_DataSet(strQuery);
+                ChannelFactory<IMiddlewareService> channelFactory = new ChannelFactory<IMiddlewareService>(binding1, baseAddress);
 
-                return dsTmp;
-
-                dsTmp = null/* TODO Change to default(_) if this is not a reference type */;
+                var webservice = channelFactory.CreateChannel();
+                return webservice;
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw (ex);
             }
-        }
-        private IMiddlewareService TpService()
-        {
-            Uri uri = new Uri("http://10.157.13.69:21012");
-
-            var enconding = new WcfCoreMtomEncoder.MtomMessageEncoderBindingElement(new TextMessageEncodingBindingElement(MessageVersion.Soap11, System.Text.Encoding.UTF8));
-            var transport = new HttpTransportBindingElement();
-            transport.TransferMode = TransferMode.Buffered;
-
-            var binding = new CustomBinding(enconding, transport);
-
-
-            EndpointAddress endpoint = new EndpointAddress("http://10.1.46.45/MiddlewareService.svc");
-            ChannelFactory<IMiddlewareService> channelFactory = new ChannelFactory<IMiddlewareService>(binding, endpoint);
-            var webservice = channelFactory.CreateChannel();
-            return webservice;
-
         }
         private DataSet Fetch_DataSet(string strQuery)
         {
@@ -117,7 +133,7 @@ namespace RemittanceApp.Utility
             try
             {
 
-                IMiddlewareService tp = TpService();
+                IMiddlewareService tp = serviceConnector();
 
                 XmlTextReader reader = null;
                 SendRequest sr = new SendRequest(Convert.ToBase64String(zip(strQuery)));
@@ -192,5 +208,105 @@ namespace RemittanceApp.Utility
                 cnt = src.Read(bytes, 0, bytes.Length);
             }
         }
+        #endregion
+
+
+        #region TP functions
+        public DataSet fmCurrency_Get_Info(string strUserID, string strCurrency_ID)
+        {
+            try
+            {
+                DataSet dsTmp;
+                string strQuery;
+                strQuery = PrepareXML(T_BOS_CURRENCY, "100", "Admin", "Admin", strUserID, "G", strCurrency_ID);
+
+
+                dsTmp = Fetch_DataSet(strQuery);
+
+                return dsTmp;
+
+                dsTmp = null/* TODO Change to default(_) if this is not a reference type */;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public DataSet fmAdminF9_Get_Info(string strFlag, string strWhere)
+        {
+            try
+            {
+                DataSet dsTmp;
+                string strQuery;
+                strQuery = PrepareXML(T_ADMIN_F9, "100", "Admin", "Admin", "1", strFlag);
+
+
+                dsTmp = Fetch_DataSet(strQuery);
+
+                return dsTmp;
+
+                dsTmp = null/* TODO Change to default(_) if this is not a reference type */;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+
+        public DataSet fmApiUser(loginModel model,string strFlag)
+        {
+            try
+            {
+                DataSet dsTmp;
+                string strQuery;
+                strQuery = PrepareXML(T_SPS_API_USER, "100", "Admin", "Admin", 
+                                    "1",
+                                    strFlag,
+                                    "",
+                                    model.userId,
+                                    model.password);
+
+
+                dsTmp = Fetch_DataSet(strQuery);
+
+                return dsTmp;
+                              
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public DataSet fmGetCountryCurrency()
+        {
+            try
+            {
+                DataSet dsTmp;
+                string strQuery;
+                strQuery = PrepareXML(T_SPS_ORG_CURR_COUNTRY,
+                                      "100",
+                                      "Admin",
+                                      "Admin",
+                                      "23",
+                                      "G",
+                                      ""
+                                      );
+
+
+                dsTmp = Fetch_DataSet(strQuery);
+
+                return dsTmp;
+
+                dsTmp = null/* TODO Change to default(_) if this is not a reference type */;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        #endregion
     }
 }

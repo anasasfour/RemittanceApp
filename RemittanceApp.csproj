@@ -26,6 +26,7 @@
     <PackageReference Include="System.ServiceModel.NetTcp" Version="4.8.1" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.8.1" />
     <PackageReference Include="System.ServiceModel.Security" Version="4.8.1" />
+    <PackageReference Include="WcfCoreMtomEncoder" Version="0.1.16" />
     <PackageReference Include="WcfCoreMtomEncoderV2" Version="1.0.1" />
   </ItemGroup>
 
